@@ -272,12 +272,12 @@ JDK安装目录结构
 继承
 
 - 类的继承
-    - class Son extends Father
+    - class Child extends Parent
     - 单继承
     - Object类
         - Java中所有类都继承自Object类
 - 实现接口
-    - class Son implements interface1, interface2...
+    - class Child implements interface1, interface2...
     - 多继承
 - 多态
     - 父类可以接受子类的对象，并调用方法
@@ -413,27 +413,363 @@ Map接口
 
 <h1 id="c2">第二章 JavaSE高级应用</h1>
 
+1. 掌握IO技术原理及使用
+2. 掌握对象序列化技术
+3. 掌握多线程运行流程及控制
+
+********
+
 <h2 id="c2s1">第一节 JavaIO流与文件操作</h2>
+
+1. 熟练掌握文件管理中的术语
+2. 熟练掌握文件操作技术
+
+----------
+
+IO流
+
+- 大多数应用程序都需要实现与设备之间的数据传输，这种传输可以归纳为输入/输出数据
+- Java中，将这种输入/输出数据的传输抽象表述为“流”
+- Java中的“流”都位于java.io包中，所以称为IO流
+- IO流分类
+    - IO流（java.io）
+        - 字节流
+            - 字节输入流（java.io.InputStream）
+            - 字节输出流（java.io.OutputStream）
+        - 字符流
+            - 字符输入流（java.io.Reader）
+            - 字符输出流（java.io.Writer）
+    - 字节流可以操作字符，字符流不可以操作字节
+
+文件管理中的术语
+
+- 文件与路径
+    - 文件：目录或者文件对象
+    - 路径：由目录名
+- 抽象路径
+    - Unix/Linux系统使用“/”作为开始
+    - Windows系统使用“\”（UNC）或者盘符“:”作为开始
+
+文件类
+- File类
+    - 用于封装一个路径（绝对路径/相对路径）
+    - 封装的路径指向一个文件/目录，操作文件/目录之前，首先得创建一个File对象
+- 构造文件对象
+    - File(File parent, String child)
+    - File(String pathname)
+    - File(String parent, String child) //parent:路径，child：文件名
+    - File(URI uri)
+        - 解决跨平台问题：使用相对路径 & 使用静态变量
+- 静态变量
+    - static String pathSeparator //系统相关的路径分隔符
+    - static char pathSeparatorChar
+    - static String separator //系统相关的分隔符
+    - static char separatorChar
+- 文件属性与类型判定
+    - boolean exists()
+    - boolean isDirecotry() //用于目录的递归
+    - boolean isFile()
+- 文件基本操作
+    - boolean delete()
+    - boolean createNewFile()
+    - boolean mkdir()
+    - boolean mkdirs() //创建多层路径
+    - String getName()
+    - String getAbsolutePath() //绝对路径 
+    - String getPath() //相对路径
+- 文件遍历
+    - String[] list()
 
 ********
 
 <h2 id="c2s2">第二节 字节流的包装和链接</h2>
 
+1. 了解字节流技术的基本原理
+2. 熟练掌握字节流读、写数据
+3. 熟练掌握包装流技术
+
+----------
+
+字节流
+
+- 所有文件都是以二进制（字节）的形式存在
+- IO流中针对字节的输入输出提供的一系列的流，统称为字节流
+- JDK中提供了两个抽象类：InputStream和OutputStream，它们是字节流的顶级父类，所有的字节输入流继承自InputStream，所有的字节输出流继承自OutputStream
+- 针对文件的读写，JDK专门提供了两个类：FileInputStream和FileOutputStream，是IS和OS的子类
+
+字节流读取数据
+
+- InputStream提供的基本操作
+    - void close()
+    - int read(byte[] b, int off, int len) //返回-1表示读取到文件末尾
+1. 创建文件对象
+    - File file = new File(filepath);
+2. 关联文件对象和字节流
+    - FileInputStream inputStream = new FileInputStream(file);
+3. 读取数据
+    - 读单个字节
+        - (char) inputStream.read();
+    - 读多个字节
+        - byte[] buffer = new byte[5];
+        - inputStream.read(buffer);
+        - syso(new String(buffer, 0, buffer.length));
+    - 读完整文件
+        - byte[] buffer = new byte[5]; // 一次读取5个字节
+        - int length = 0;
+        - while((length = inputStream.read(buffer)) != -1) {
+            syso(new String(buffer, 0, buffer.length));
+        }
+4. 提高效率
+    - BufferedInputStream bufferedInputStream = new BufferedInputStream(inputStream);
+    - ...while((length = bufferedInputStream.read(buffer)) != -1)...
+5. 关闭资源
+    - finally
+        - bufferedInputStream.close();
+        - inputStream.close();
+
+字节流写数据
+
+- OutputStream提供的基本操作
+    - void close()
+    - void flush()
+    - void write(byte[] b, int off, int len)
+1. 创建文件对象
+    - File file = new File(filepath);
+2. 关联文件对象和字节流
+    - FileOutputStream outputStream = new FileOutputStream(file);
+3. 写数据
+    - outputStream.write("hello world".getBytes());
+    - outputStream.flush(); //强制刷新，将数据从内存写入磁盘，否则数据将在流关闭时自动写入磁盘
+4. 提高效率
+    - BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(outputStream);
+    - bufferedOutputStream.write("hello world".getBytes());
+5. 关闭资源
+    - finally
+        - bufferedOutputStream.close();
+        - outputStream.close();
+
+缓冲区提高效率读写字节
+
+- 自定义缓冲区BufferedInputStream、BufferedOutputStream
+
 ********
 
 <h2 id="c2s3">第三节 字符流的包装和链接</h2>
+
+1. 熟练掌握字符流读、写文本数据
+2. 掌握字符集编、解码技术
+3. 熟练掌握字符流的包装流技术
+
+----------
+
+字符流
+
+- 在程序开发中，经常需要对文本文件的内容进行读写操作，为了操作方便，Java专门为文本的操作定义了相关API，这就是字符流
+- 字符输入流FileReader是Reader的一个子类，字符输出流FileWriter是Writer的一个子类
+
+字符流读数据
+
+- FileReader reader = new FileReader(filepath);
+- char[] buffer = new char[1024]; //一次读1024个字符
+- reader.read(buffer);
+- syso(new String(buffer, 0, buffer.length));
+- *BufferedReader*
+    - FileReader reader = new FileReader(filepath);
+    - BufferedReader br = new BufferedReader(reader);
+    - String buffer = null;
+    - while((buffer = br.readLine()) != null) {
+        syso(buffer);
+    }
+
+字符流写数据
+
+- FileWriter writer = new FileWriter(filepath);
+- writer.write("hello world"); //直接写字符串
+- writer.flush();
+- writer.close();
+
+----------
+
+字符码表
+
+- 是一种可以方便计算机识别的特定字符集，它是将每一个字符和一个唯一的数字对应而形成的一张表
+- 常见的码表有ASCII（美国，单字节）、ISO8859-1（欧洲）、GBK（中国，双字节）、unicode（统一，双字节）、UTF-8（目前最常用）
+- 编码：把字符串转换成计算机能够识别的字节序列
+- 解码：把字节序列转换成普通人能看懂的明文字符串
+- 乱码是由于编码和解码方式不一致导致的
 
 ********
 
 <h2 id="c2s4">第四节 对象的序列化</h2>
 
+1. 掌握序列化的含义与意义
+2. 掌握序列化读、写对象
+
+----------
+
+序列化接口
+
+- 序列化（Serialization）是将对象的状态信息转换为可以存储或传输的形式的过程
+- 主要目的：数据持久化，即数据的物理存储，比如保存到磁盘
+- 反序列化：把持久化的数据恢复成原来的格式
+- Java对象的序列化，必须实现序列化接口Serializable
+    - 该接口没有任何接口方法，由JDK在底层实现
+    - 序列化接口表明一种类型，JavaVM对序列化类型的对象进行额外的处理
+    - 没有序列化的对象，在Java编程中保存的时候会抛出异常
+
+----------
+
+写对象
+
+- 被写对象实现序列化接口
+    - public class SerializedObject implements Serializable { ... }
+- 确定对象写往的目的地，通常是文件或网络。然后采用过滤方式构造ObjectOutputStream，通过writeObject方法写对象
+    - ObjectOutputStream os = new ObjectOutputStream(fileOutputStream);
+    - os.writeObject(new SerializedObject())
+
+读对象
+
+- 确定读取对象的源，然后使用流过滤，得到ObjectInputStream对象，通过ObjectInputStream对象的readObject方法可以直接读取对象
+    - ObjectInputStream is = new ObjectInputStream(fileInputStream);
+    - SerializedObject o = (SerializedObject) is.readObject();
+
+禁止某些字段序列化（节省空间）
+
+- 使用transient修饰符号
+
+----------
+
+序列化版本管理
+
+- JDK为了序列化的兼容性，引入了序列化版本管理的概念
+- 读取比较旧的对象时，新版本必须定义与旧类一样的版本ID：serialVersionID
+    - private static final long serialVersionUID = 1L;
+    - 如果类中定义了serialVersionID，JDK的序列化系统会自动读取序列化的不同版本
+    - 如果类中没有定义serialVersionID，需要使用工具查看版本，并手工处理在新的类中的定义与原来的版本相同
+
 ********
 
 <h2 id="c2s5">第五节 线程的创建、运行和结束</h2>
 
+1. 了解线程的含义与意义
+2. 掌握线程的实现方式
+3. 掌握线程的创建、运行和结束流程
+
+----------
+
+进程
+
+- 在一个操作系统中，每个独立执行的程序都可称之为一个进程，也就是“正在运行的程序”
+- 目前大部分计算机上安装的都是多任务操作系统，即能够同时执行多个应用程序
+
+线程
+
+- 每个运行的程序都是一个进程，在一个进程中可以有多个执行单元同时运行，这些执行单元可以看做程序执行的一条条线索，被称为线程
+- 操作系统中的每一个进程中都至少存在一个线程，当一个Java程序启动时，就会产生一个进程，该进程默认创建一个线程，在线程上运行main()方法中的代码
+- 单线程程序：代码按照调用顺序依次往下执行
+- 多线程程序：多段程序代码交替运行，每个线程之间都是独立的，可以并发执行
+
+----------
+
+实现线程
+
+- 两种方式
+    - 继承Thread类，重写Thread中的run()方法
+    - 实现Runnable接口，重写Runnable接口中的run()方法
+- Thread也实现了Runnable接口，所以两种方式本质是一样的
+    - 继承Thread类：线程实现方法与Thread类集成在一起
+    - 实现Runnable接口：线程实现方式与Thread类分离开
+- 推荐使用实现Runnable接口方式，可以避免由于Java的单继承带来的局限性
+
+----------
+
+创建线程
+
+- Thread构造器
+    - Thread() //对象*继承Thread类*时，创建对象即创建Thread对象
+    - Thread(Runnable target) //target为*实现Runnable接口*的对象
+    - Thread(Runnable target, String name)
+- 继承Thread类
+    - public class Object extends Thread {
+        @Override //重写run()方法
+        public void run() {
+            ...
+        }
+    }
+    - 调用线程
+        - Object o1 = new Object(); //创建一个对象，该对象同时已经继承了Thread类，因此也是一个线程
+        - Object o2 = new Object();
+        - o1.start(); //默认执行run方法，多线程并发
+        - o2.start();
+- 实现Runnable接口
+    - public class Object implements Runnable {
+        @Override //重写run()方法
+        public void run() {
+            ...
+        }
+    }
+    - 调用线程
+        - Object o = new Object(); //创建Runnalbe接口的对象
+        - Thread thread1 = new Thread(o); //创建Thread类，即一个线程
+        - Thread thread2 = new Thread(o);
+        - thread1.start(); //启动线程
+        - thread2.start();
+
+启动线程
+
+- 在Thread类中，提供了一个start()方法用于启动线程
+- 新线程启动后，系统会自动调用run()方法，如果子类重写了该方法，便会执行子类中的方法
+
+结束线程
+
+- 线程的run方法执行结束，就意味着线程结束
+- 在run方法中使用return也可以结束线程 //本质上也是run方法执行结束了
+
 ********
 
 <h2 id="c2s6">第六节 线程控制</h2>
+
+1. 熟练掌握线程的生命周期、状态
+2. 熟练掌握线程状态转换的开发
+3. 掌握多线程安全问题初步处理方法
+
+----------
+
+线程的生命周期
+
+- 五个阶段状态：新建状态（New）、就绪状态（Runnable）、运行状态（Running）、阻塞状态（Blocked）、死亡状态（Terminated）
+- *新建状态* --start()--> *就绪状态* <--CPU使用权--> *运行状态* --run方法执行完/异常--> *死亡状态*
+- *运行状态* --等待同步锁/调用IO阻塞方法/调用wait()/调用join()/调用sleep()--> *阻塞状态* --获得同步锁/阻塞IO返回/调用notify()/调用join()的线程终止/sleep()时间到--> *就绪状态*
+- 新建状态（New）
+    - 创建线程对象后，处于新建状态，此时不能运行，和其它Java对象一样，仅仅由JavaVM为其分配了内存，没有任何线程的动态特征
+- 就绪状态（Runnable）
+    - 当线程对象调用了start()方法后，线程进入就绪状态。处于就绪状态的线程位于可运行池中，此时它只是具备了运行的条件，能否获得CPU的使用权开始运行，需要等待系统的调度
+- 运行状态（Running）
+    - 如果处于就绪状态的线程获得了CPU的使用权，开始执行run()方法中的线程执行体，则该线程处于运行状态。一般来说当使用完系统分配的时间后，系统会剥夺线程占用的CPU资源，让其它线程活动执行的机会
+- 阻塞状态（Blocked）
+    - 一个正在执行的线程在某些特殊情况下，会放弃CPU的使用权，进入阻塞状态。线程进入阻塞状态后，就不能进入排队队列。只有当引起阻塞的原因被消除后，线程才可以转入就绪状态
+        1. 当线程试图获取某个对象的同步锁时，如果该锁被其它线程所持有，则当前线程会进入阻塞状态
+        2. 当线程调用了一个阻塞式的IO方法时
+        3. 当线程调用了某个对象的wait()方法时
+            - 调用notify()方法唤醒该线程
+        4. 当线程调用了Thread的sleep(long millis)方法时
+            - 线程睡眠时间到了以后，自动进入就绪状态
+        5. 当一个线程中调用了另一个线程的join()方法时 //线程插队
+            - 等待新加入的线程运行结束后，进入就绪状态
+- 死亡状态（Terminated）
+    - run方法中的代码执行完毕，线程进入死亡状态
+
+----------
+
+线程安全
+
+- 由多线程操作共享资源时，可能会导致线程安全的问题
+- 同步代码块解决多线程问题
+    - 同步：线程一个一个的执行，对于共享的资源，只能有一个线程操作，其它的线程必须等待
+    - 锁：如果想同步，需要一个同步锁，不同的线程对于锁要一致
+    - synchronized(object) {
+        ... //对于共享的数据进行锁定
+    }
 
 ********
 
