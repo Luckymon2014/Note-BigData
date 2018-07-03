@@ -775,13 +775,148 @@ IO流
 
 <h1 id="c3">第三章 JAVA操作数据库</h1>
 
+1. 了解MySQL数据库
+2. 掌握Linux系统下安装MySQL数据库方法
+3. 熟练掌握MySQL数据库操作技术
+4. 掌握事务的特性及隔离级别
+5. 掌握JDBC操作MySQL数据库
+
 ********
 
 <h2 id="c3s1">第一节 Linux系统下安装MySQL数据库</h2>
 
+1. 了解MySQL数据库的概念
+2. 掌握MySQL数据库在Linux系统下的安装
+
+----------
+
+MySQL简介
+
+- 数据库简介
+    - SQL Server（微软）、Oracle、MySQL、DB2（IBM）、SyBase
+- MySQL：免费、开源、安装容易
+
+安装MySQL
+
+- 获取MySQL的rpm文件
+    - wget https://dev.mysql.com/get/mysql-community-release-el7-5.noarch.rpm
+- 解压文件
+    - rpm -ivh mysql-community-release-el7-5.noarch.rpm
+- 安装MySQL服务端
+    - yum install mysql-community-server
+- 重启服务
+    - service mysql restart
+    - 进入MySQL命令端：mysql -uroot
+- 设置管理员密码
+    - 默认root没有密码
+    - set password for 'root'@'localhost' = password('123456');
+- 再次登录需要用户名、密码
+    - mysql -u用户名 -p
+
+----------
+
+数据库服务器、数据库和表的关系
+
+- 数据库服务器可以创建多个数据库
+- 数据库可以创建多个表
+- 表用来保存程序中不同实体的数据
+- 客户端访问数据库服务器需要ip+端口(默认3306)
+
+数据在数据库中的存储方式
+
+- 表的一行称之为一条记录
+- 表中一条记录对应一个Java对象的数据
+
+SQL语句分类
+
+- DDL（Data Definition Language）数据定义语言 //库和表的操作
+- DML（Data Manipulation Language）数据操纵语言 //数据的操作
+- DQL（Data Query Language）数据查询语言
+
 ********
 
 <h2 id="c3s2">第二节 MySQL数据库操作</h2>
+
+1. 掌握数据库的创建、删除、查看
+2. 掌握MySQL常用数据类型
+3. 掌握数据库表的创建、修改、删除及查看功能
+4. 掌握数据的插入、修改、删除及查看功能
+
+----------
+
+创建数据库
+
+- CREATE DATABASE [IF NOT EXISTS] db_name [create_specification [, create_specification] ...]
+- create_specification:
+    - [DEFAULT] CHARACTER SET charset_name
+- CHARACTER SET：指定数据库采用的字符集 //一般用utf8
+
+查看、删除数据库
+
+- 显示数据库语句
+    - SHOW DATABASES
+- 显示数据库创建语句
+    - SHOW CREATE DATABASE db_name
+- 数据库删除语句
+    - DROP DATABASE [IF EXISTS] db_name
+
+----------
+
+创建表
+
+- CREATE TABLE table_name (
+    field1 datatype,
+    field2 datatype,
+) character set 字符集
+- 创建表前，要先使用use db语句使用库
+- 创建表时，要根据需保存的数据创建相应的列，并根据数据的类型定义相应的列类型
+
+修改表
+
+- ABTER TABLE table_name
+    - ADD (column datatype [DEFAULT expr] [, column datatype...])
+    - MODIFY column datatype [DEFAULT expr] [, column datatype...]
+    - DROP (column)
+
+删除表
+
+- DROP TABLE table_name
+
+----------
+
+数据库DML语句
+
+- Insert语句（增加数据）
+    - INSERT INTO table (column[, column...]) VALUES (value[, value...])
+    - 插入的数据应与字段的数据类型相同
+    - 数据的大小应在列的规定范围内
+    - 字符和日期类型应包含在单引号中
+    - 插入空值：不指定或insert int table value(null)
+- Update语句（更新数据）
+    - UPDATE table_name SET column=value[, column=value...] [where ...]
+- Delete语句（删除数据）
+    - DELETE FROM table_name [where ...]
+    - TRUNCATE TABLE
+
+----------
+
+数据库DQL语句
+
+- 基本select语句
+    - SELECT [DISTINCT] *|column as 别名,column... FROM table_name
+- where子语句
+    - BETWEEN...AND...
+    - IN(set)
+    - LIKE
+        - “%”代表零个或多个任意字符，“_代表一个字符”
+    - IS NULL
+- order by子语句
+    - asc升序、desc降序
+    - 位于语句的结尾
+- 合计函数count(column)
+- 合计函数sum(column)[, sum(column)...]
+- 合计函数avg(column)[, avg(column)...]
+- 合计函数max(column)/min(column)
 
 ********
 
