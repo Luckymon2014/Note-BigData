@@ -913,15 +913,104 @@ SQL语句分类
 - order by子语句
     - asc升序、desc降序
     - 位于语句的结尾
-- 合计函数count(column)
-- 合计函数sum(column)[, sum(column)...]
-- 合计函数avg(column)[, avg(column)...]
-- 合计函数max(column)/min(column)
+- 合计函数
+    - count(column)
+    - sum(column)[, sum(column)...]
+    - avg(column)[, avg(column)...]
+    - max(column)/min(column)
 
 ********
 
 <h2 id="c3s3">第三节 事务与隔离级别</h2>
 
+1. 了解事务的概念
+2. 掌握事务的特性
+3. 掌握事务的隔离级别
+
+---------
+
+事务
+
+- 是指逻辑上的一组操作，组成这组操作的各个单元，要么全都成功，要么都失败
+- 数据库事务命令
+    - start transaction 开启事务
+    - rollback 回滚事务
+    - commit 提交事务
+- 事务的特性（ACID）
+    - 原子性（Atomicity）：不可再分，要么都成功，要么都失败
+    - 一致性（Consistency）
+    - 隔离性（Isolation）：每个线程互相隔离
+    - 持久性（Durability）：commit后，数据保存
+- 隔离级别
+    - 多个线程开启各自的事务操作数据库时，数据库系统要负责隔离操作，以保证各个线程在获取数据时的准确性
+    - 不隔离引发的问题
+        - 不可重复读：在一个事务内读取表中的数据，多次读取结果不同
+            - 重新读取了前一事务已提交的数据
+        - 脏读：一个事务读取了另一个事务未提交的数据
+            - 读取了前一事务未提交的数据
+        - 虚读：一个事务读取了别的事务插入的数据
+    - 数据库定义了四种隔离级别
+        - 有序列化（Serializable）：可避免脏读、不可重复读、虚读的情况发生
+        - 可重复读（Repeatable read）：可避免脏读、不可重复读、虚读的情况发生
+        - 读已提交（Read committed）：可避免脏读的情况发生
+        - 读未提交（Read uncommitted）：最低级别，以上情况均无法保证
+    - 设置事务隔离级别
+        - set tx_isolation='READ-COMMITTED'
+    - 查询事务隔离级别
+        - select @@tx_isolation
+
 ********
 
 <h2 id="c3s4">第四节 JDBC操作MySQL数据库</h2>
+
+1. 掌握JDBC基本原理
+2. 熟练掌握JDBC技术对数据库的操作
+
+---------
+
+JDBC简介
+
+- 数据库驱动
+    - 需要学习不同数据库驱动
+- SUN公司为了简化、统一对数据库的操作，定义了一套Java操作数据库的规范，称之为JDBC
+    - 只需要学JDBC
+- JDBC全称为Java DataBase Connectivity，它主要由接口组成
+- 组成JDBC的两个包
+    - java.sql
+    - javax.sql
+- 开发JDBC应用需要以上两个包外，还需要对应的JDBC数据库驱动
+
+----------
+
+1. 搭建实验环境
+    - 数据
+    - Java工程，导入数据库驱动
+2. 在程序中加载数据库驱动
+    - Class.forName("com.mysql.jdbc.Driver")
+3. 建立连接
+    - Connection conn = DriverManager.getConnection(url, user, password)
+        - URL：jdbc:mysql:[]//ip:port/db_name?参数名:参数值
+        - Oracle：jdbc:oracle:thin:@localhost:1521:sid
+        - SqlServer：jdbc:microsoft:sqlserver://localhost:1433;DatabaseName=sid
+        - MySQL：jdbc:mysql://localhost:3306/sid
+        - 常用属性：useUnicode=true&characterEncoding=UTF-8
+4. 创建向数据库发送SQL的Statement对象，并发送SQL
+    - Statement st = conn.createStatement()
+        - PreperedStatement是Statement的子类
+        - comm.preparedStatement()
+        - 可以避免SQL注入的问题
+        - 对SQL进行预编译，提高数据库执行效率
+        - SQL中的参数允许使用占位符的形式替换，简化SQL编写
+    - ResultSet rs = st.excute.Query(sql)
+5. 从结果集中取出数据
+6. 断开数据库连接，释放资源
+    - resultSet.close()
+    - statement.close()
+    - connection.close()
+
+可能遇到的问题
+
+- 数据库没有设置允许远程登录
+    - GRANT ALL PRIVILEGES ON *.* TO 'root'@'ip' IDENTIFIED BY 'password' WITH GRANT OPTION
+- 防火墙组织远程登录
+    - systemctl stop firewalld.service
