@@ -13,6 +13,7 @@
 - [第三节 Hadoop的生态体系](#3)
 - [第四节 Hadoop3.0新特性介绍](#4)
 - [第五节 Hadoop在互联网公司的应用案例解析](#5)
+- [第六节 Hadoop2.X安装部署的三种模式](#6)
 
 ***
 
@@ -283,3 +284,25 @@ RS12-->Hadoop
 RS21-->Hadoop
 RS22-->Hadoop
 ```
+
+***
+
+<h4 id='6'>第六节 Hadoop2.X安装部署的三种模式</h4>
+
+1. 熟练掌握Hadoop安装准备条件
+2. 熟练掌握Hadoop三种模式的安装配置
+
+---
+
+预备条件
+- 设置主机名和IP地址
+    - 修改主机名（hostname文件）
+    - 完成IP和主机名映射（hosts文件）
+- 关闭防火墙
+    - systemctl status firewalld.service
+    - systemctl stop firewalld.service
+    - systemctl disable firewalld.service
+- 安装JDK
+    - tar -zxvf jdk-* -C dir
+    - 配置环境变量
+- 配置SSH免密登录
