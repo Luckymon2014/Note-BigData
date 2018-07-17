@@ -176,18 +176,23 @@ Hadoop生态系统相关项目
 
 ```mermaid
 graph TD
+
 HDFS("HDFS：分布式文件系统（存数据）")
 Yarn("Yarn：MapReduce（容器：运行程序）")
-HBase("HBase：NoSql数据库（海量数据）")
 
-HBase-->|"管理数据"|HDFS
-Yarn-->|"计算数据"|HDFS
+HBase("HBase：NoSql数据库（海量数据）")-->|管理数据|HDFS
 
-Sqoop/Flume-->|"数据采集、迁移"|Yarn
-Pig/Hive-->|"数据分析、挖掘"|Yarn
+subgraph Hadoop
+    HDFS
+    Yarn-->|计算数据|HDFS
+end
+
+
+Sqoop/Flume-->|数据采集/数据迁移|Yarn
+Pig/Hive-->|数据分析/数据挖掘|Yarn
 
 Zookeeper("Zookeeper：协调服务器")
-Zookeeper-->|"协调"|HDFS
+Zookeeper-->|协调|HDFS
 ```
 
 ***
@@ -306,3 +311,188 @@ RS22-->Hadoop
     - tar -zxvf jdk-* -C dir
     - 配置环境变量
 - 配置SSH免密登录
+    - 免密登录原理
+    1. Hadoop1：产生一个秘钥对
+        - 公钥：给别人
+        - 私钥：自己保留
+    2. Hadoop1：发送公钥给Hadoop2
+    3. Hadoop2：得到公钥
+    4. Hadoop2：随机产生一个字符串
+    5. Hadoop2：用公钥加密
+    6. Hadoop2：将密文发送给Hadoop1
+    7. Hadoop1：得到密文
+    8. Hadoop1：使用私钥解密
+    9. Hadoop1：将明文发送给Hadoop2
+    10. Hadoop2：得到明文
+    11. Hadoop2：对比得到的明文和自己发送的明文，如果一致，允许登录
+    - 配置
+    1. 产生秘钥对
+        - ssh-keygen -t rsa
+    2. 秘钥对默认生成在家目录的.ssh目录下
+    3. 把自己的公钥给需要免密登录对象
+        - ssh-copy-id-i .ssh/id_rsa.pub root@localhost
+    4. 会发现Hadoop的/root/.ssh目录下多了文件authorized_keys
+    5. 验证是否能够实现免密登录
+        - ssh hadoop001
+
+---
+
+1. 本地模式
+    - 特点
+        - 不具备HDFS功能，所有数据存在Linux上
+        - 只能运行MapReduce程序
+    - 解压安装文件
+        - tar -zxvf hadoop-*.tar.gz
+    - 目录结构
+        - bin：操作命令
+        - etc/hadoop：配置文件
+        - sbin：管理命令：启动、停止
+        - share/doc：文档
+        - share/hadoop：按照模块对各个组件进行划分
+            - common：公用的jar包
+            - mapreduce：hadoop-mapreduce-examples.jar-学习用的jar包
+    - 修改相关配置文件
+        - hadoop-env.sh：配置JAVA_HOME
+    - 配置环境变量
+    - 验证本地配置模式
+        - 启动
+            - start-all.sh
+        - 准备测试数据
+            - mkdir -p data/input
+            - vi data.txt
+        - 测试(MapReduce功能)
+            - cd $HADOOP_HOME/share/hadoop/mapreduce
+            - hadoop jar hadoop-mapreduce-*.jar wordcount .../data/input/data.txt .../data/output/wordcount
+2. 伪分布模式
+    - 特点
+        - 具有Hadoop的所有功能：HDFS和Yarn
+        - 在单机上模拟分布式
+        - 适合开发和测试使用
+    - 配置
+
+    <table>
+        <tr>
+            <td>参数文件</td>
+            <td>配置参数</td>
+            <td>参考值</td>
+            <td>解释</td>
+        </tr>
+    <!-- hadoop-env.sh -->
+        <tr>
+            <td>hadoop-env.sh</td>
+            <td>JAVA_HOME</td>
+            <td>/root/software/jdk1.8</td>
+            <td></td>
+        </tr>
+    <!-- hdfs-site.xml -->
+        <tr>
+            <td rowspan="4">hdfs-site.xml</td>
+            <td>dfs.replication</td>
+            <td>1</td>
+            <td>数据块冗余度：默认是3，即备份3份</td>
+        </tr>
+        <tr>
+            <td>dfs.permissions</td>
+            <td>FALSE</td>
+            <td>不进行权限校验</td>
+        </tr>
+        <tr>
+            <td>dfs.namenode.name.dir</td>
+            <td>file:/data/name/data</td>
+            <td>HDFS的元信息保存目录</td>
+        </tr>
+        <tr>
+            <td>dfs.datanode.data.dir</td>
+            <td>file:/data/dfs/data</td>
+            <td>HDFS的数据保存目录</td>
+        </tr>
+    <!-- core-site.xml -->
+        <tr>
+            <td rowspan="2">core-site.xml</td>
+            <td>fs.defaultFS</td>
+            <td>hdfs://hostname:9000</td>
+            <td>NameNode地址</td>
+        </tr>
+        <tr>
+            <td>hadoop.tmp.dir</td>
+            <td>/root/software/hadoop2.6/tmp</td>
+            <td>日志保存目录：默认是/tmp</td>
+        </tr>
+    <!-- mapred-site.xml -->
+        <tr>
+            <td>mapred-site.xml</td>
+            <td>mapreduce.framework.name</td>
+            <td>yarn</td>
+            <td>Map-Reduce运行的平台：在Yarn平台上运行</td>
+        </tr>
+    <!-- yarn-site.xml -->
+        <tr>
+            <td rowspan="2">yarn-site.xml</td>
+            <td>yarn.resourcemanager.hostname</td>
+            <td>hostname</td>
+            <td>Yarn的主节点</td>
+        </tr>
+        <tr>
+            <td>yarn.nodemanager.aux-services</td>
+            <td>mapreduce_shuffle</td>
+            <td>mr处理数据的方式，从节点</td>
+        </tr>
+    </table>
+
+    - 创建需要的文件路径
+    - 格式化namenode
+        - hdfs namenode -format
+    - 验证安装是否成功
+        - 启动集群
+            - start-all.sh
+        - 查看进程
+            - jps
+            - NameNode、DataNode、NodeManager、ResourceManager、SecondaryNameNode
+3. 全分布模式
+    - 特点
+        - 具备Hadoop的所有功能：HDFS和Yarn
+        - 数据更加安全可靠
+        - 性能更高
+        - 适合生产环境使用
+```mermaid
+graph TD
+
+用户-->|请求数据|Hadoop001
+Hadoop002-->|提供数据|用户
+Hadoop003-->|提供数据|用户
+
+subgraph Hadoop
+    Hadoop001(Hadoop001:NameNode)
+
+    Hadoop001-->|管理/指派|Hadoop002(Hadoop002:DataNode)
+    Hadoop001-->|管理/指派|Hadoop003(Hadoop003:DataNode)
+end
+```
+-
+    1. 准备多台Linux服务器
+    2. 关闭防火墙
+    3. 配置主机名和地址映射
+        - hosts文件
+    4. 安装JDK
+    5. 配置免密登录
+    6. 同步三台服务器的时间
+    7. 安装配置Hadoop
+        - core-site/yarn-sit：修改主节点ip
+        - 配置slaves：修改从节点名称
+        - dfs.replication：备份数量
+    8. 清理数据
+        - hadoop的tmp路径下内容
+        - hadoop配置的元信息保存路径下的内容
+        - hadoop配置的数据保存路径下的内容
+    9. 复制操作系统
+    10. 格式化hdfs
+    11. 启动
+    12. 测试
+
+    - 与伪分布配置的不同点
+        - 需要配置slaves文件（从节点）
+    - 真实环境复制Hadoop环境
+        - scp -r hadoop2.6/ root@hadoop002:/root/training
+
+***
+

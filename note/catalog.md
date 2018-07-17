@@ -25,6 +25,7 @@
 3. 掌握HDFS原理、使用及Java开发
 4. 掌握MapReduce原理、使用及Java开发
 - [Hadoop 2.X入门](./大数据从基础到入门/Hadoop生态体系/Hadoop2.X入门.md)
+- [Hadoop 2.X入门进阶实战](./大数据从基础到入门/Hadoop生态体系/Hadoop2.X入门进阶实战.md)
 - [大数据文件系统之HDFS](./大数据从基础到入门/Hadoop生态体系/大数据文件系统之HDFS.md)
 - [MapReduce实战及原理](./大数据从基础到入门/Hadoop生态体系/MapReduce实战及原理.md)
 
