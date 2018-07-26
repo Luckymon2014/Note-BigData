@@ -105,7 +105,7 @@ NameNode
 - HDFS管理员
 - 功能
     - 响应客户端请求（上传、下载）
-    - 管理元数据（目录、文件、Block对应关系、Block和DataNode映射关系等）
+    - 管理元数据（目录、文件、Block对应关系，Block和DataNode映射关系等）
 - 主要文件
     - fsimage
         - 保存文件系统的映射信息
