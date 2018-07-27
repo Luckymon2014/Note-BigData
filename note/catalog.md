@@ -30,6 +30,7 @@
 - [Hadoop 2.X入门进阶实战](./大数据从基础到入门/Hadoop生态体系/Hadoop2.X入门进阶实战.md)
 - [大数据文件系统之HDFS](./大数据从基础到入门/Hadoop生态体系/大数据文件系统之HDFS.md)
 - [MapReduce实战及原理](./大数据从基础到入门/Hadoop生态体系/MapReduce实战及原理.md)
+- [Hadoop高级编程](./大数据从基础到入门/Hadoop生态体系/Hadoop高级编程.md)
 
 
 ----------
