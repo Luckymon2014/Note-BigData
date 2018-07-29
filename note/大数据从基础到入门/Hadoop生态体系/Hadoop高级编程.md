@@ -9,7 +9,7 @@
 - [第二节 使用MRUnit进行单元测试过程](#2)
 - [第三节 MapReduce 数据压缩Snappy,Gzip,LZO](#3)
 - [第四节 MapReduce Partitioner,Combiner实现及应用](#4)
-- [第五节 Mapreduce高级编程](#5)
+- [第五节 Mapreduce 高级编程](#5)
 
 ***
 
@@ -107,10 +107,108 @@ MRUnit
 
 <h4 id='3'>第三节 MapReduce 数据压缩Snappy,Gzip,LZO</h4>
 
+1. 掌握MapReduce压缩原理
+2. 掌握MapReduce压缩配置方法
+
+---
+
+MapReduce压缩
+- 文件压缩好处
+    - 节省文件存储空间
+    - 加速网络数据传输或磁盘读写
+- 常用压缩格式
+    压缩格式|工具|算法|扩展名|多文件|可分割性
+    -|-|-|-|-|-
+    DEFLATE|无|DEFLATE|.deflate|不|不
+    GZIP|gzip|DEFLATE|.gzp|不|不
+    ZIP|zip|DEFLATE|.zip|是|是，在文件范围内
+    BZIP2|bzip2|BZIP2|.bz2|不|是
+    LZO|lzop|LZO|.lzo|不|是
+- 压缩效果对比
+    压缩算法|原始文件大小|压缩文件大小|压缩速度|解压速度
+    -|-|-|-|-
+    gzip|8.3GB|1.8GB|17.5MB/s|58MB/s
+    bzip2|8.3GB|1.1GB|2.4MB/s|9.5MB/s
+    LZO-bset|8.3GB|2GB|4MB/s|60.6MB/s
+    LZO|8.3GB|2.9GB|49.3MB/s|74.6MB/s
+- 压缩算法说明
+    压缩格式|split|native|压缩率|速度|是否hadoop自带|linux命令|换成压缩格式后，原来的应用程序是否要修改
+    -|-|-|-|-|-|-|-
+    gzip|否|是|很高|比较快|是|有|和文本处理一样，不需要修改
+    lzo|是|是|比较高|很快|否|有|需要建索引，还需要指定输入格式
+    snappy|否|是|比较高|很快|否|没有|和文本处理一样，不需要修改
+    bzip2|是|否|最高|慢|是|有|和文本处理一样，不需要修改
+- bzip2压缩比最高，压缩效率低，可以用作数据归档
+- lzo压缩比低，压缩效率高，并且可分割，适合生产环境
+    - CDH默认实现LZO，其他版本Hadoop需要安装LZO
+    - 生产环境常用ORCFile+LZO
+    - 优点
+        - 压缩/解压速度比较快，合理的压缩率
+        - 支持split，是Hadoop中最流行的压缩格式
+        - 支持Hadoop native库
+        - 可以在linux系统下安装lzop命令，使用方便
+    - 缺点
+        - 压缩率比gzip要低一些
+        - Hadoop本身不支持，需要安装
+        - 应用中，对lzo格式的文件要做一些特殊处理
+            - 支持split需要建索引
+            - 需要指定inputformat为lzo格式
+- 在不需要分割的情况下（shuffle过程一般都需要将数据分割成split），生产环境可选择gzip或snappy
+    - 数据压缩后文件大于1G，选择LZO
+    - 数据压缩后文件大于1G，选择gzip或snappy
+
+MapReduce压缩使用
+- Map端压缩
+    - mapreduce.map.output.compress
+    - mapreduce.map.output.compress.codec
+- MapReduce端输出压缩
+    - mapreduce.output.fileoutputformat.compress
+    - mapreduce.output.fileoutputformat.compress.type=BLOCK
+        - 默认情况下是RECORD，即针对每条记录进行压缩
+        - 如果改成BLOCK，将针对一组记录进行压缩
+        - 数据量大，采用BLOCK，压缩效率高，压缩比低
+    - mapreduce.output.fileoutputformat.compress.codec=org.apache.hadoop.io.compress.GzipCodec
+
 ***
 
 <h4 id='4'>第四节 MapReduce Partitioner,Combiner实现及应用</h4>
 
+1. 掌握MapReduce Partitioner
+2. 掌握MapReduce Combiner
+
+---
+
+MapReduce Partitioner
+- Hadoop中的Partitioner阶段，针对Map阶段输出的数据进行分区处理
+- 对key进行分区处理，使拥有不同的key的数据被分到不同的Reduce中处理
+- 其处理位置是在节点本身
+- 可以在Reduce之前进行一次分类，提高效率
+- 可以自定义key的分区规则，如数据文件包含不同省份，每个省份输出一个文件
+- 框架本身有默认的HashPartitioner
+
+MapReduce Combiner
+- 在map端对输出先做一次合并
+- 实现本地key的归并，类似本地reduce功能
+- job.setCombinerClass(MyReducer.class)
+
 ***
 
 <h4 id='5'>第五节 Mapreduce高级编程</h4>
+
+1. 掌握MapReduce数据去重
+2. 掌握MapReduce数据排序
+3. 掌握MapReduce倒排索引
+
+---
+
+数据去重
+- 利用MapReduce对key的汇聚机制，将重复的数据去掉
+
+二次排序
+- Hadoop默认将结果mapper的输出按照key来进行排序
+- 二次排序：将数据按照value排序
+    - 构造一个WritableComparable对象，同时保留Key和Value的值
+    - 自定义方法中的排序方法compareTo
+
+倒排索引
+- 统计每个关键词在各个文档当中的第几行出现了几次
