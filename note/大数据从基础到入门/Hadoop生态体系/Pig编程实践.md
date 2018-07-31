@@ -126,6 +126,26 @@ Apache Pig执行
     - 嵌入式模式（UDF）
         - Apache Pig允许在Java等编程语言中定义函数（UDF用户定义函数），并在脚本中使用它们
 
+Apache Pig Grunt Shell
+- Grunt Shell主要用于编写Pig Latin脚本
+    - Local模式：```$ ./pig -x local```
+    - MapReduce模式：```$ ./pig -x mapreduce```
+- 执行脚本方法如下
+    - Local模式：```$ pig -x local script.pig```
+    - MapReduce模式：```$ pig -x mapreduce script.pig```
+
+Pig数据类型
+- int, long, float, double, chararray, bytearray
+- map, tuple, bag
+- 操作符：+, -, *, /, %, ==
+- NULL
+
+Pig字段定义-Schema
+- 类似Table
+- 可以指定relation为特定的结构，为字段指定名称和类型
+-
+
+
 ***
 
 <h4 id='4'>第四节 Pig函数操作</h4>
