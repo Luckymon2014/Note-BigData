@@ -38,8 +38,11 @@
 # 机器学习
 
 #### [google机器学习教程](https://developers.google.cn/machine-learning/crash-course)
+- [主要概念和工具](./机器学习/google/主要概念和工具.md)
 - [机器学习概念](./机器学习/google/机器学习概念.md)
-
+- [机器学习工程](./机器学习/google/机器学习工程.md)
+- [机器学习现实世界应用示例](./机器学习/google/机器学习现实世界应用示例.md)
+- [总结](./机器学习/google/总结.md)
 
 #### [机器学习小咖养成记](https://edu.csdn.net/huiyiCourse/series_detail/108)
 - [数学基础](./机器学习/机器学习小咖养成记/数学基础.md)
