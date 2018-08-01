@@ -143,17 +143,137 @@ Pig数据类型
 Pig字段定义-Schema
 - 类似Table
 - 可以指定relation为特定的结构，为字段指定名称和类型
--
+- Pig设计用于处理纯输入文件（不带类型信息），可以为同样的数据指定不同的schema
+- Pig中的schema可以在数据处理过程中定义
+    - records = LOAD "input/path" AS (year: int, temperature: int)
+    - records = LOAD "input/path" AS (year: chararray, temperature: int)
+    - 其中LOAD "input/path"即一个schema
 
+Pig数据输出
+- Dump：打印结果，包含“()”
+- Store：输出至HDFS文件系统中，不包含“()”
+
+Pig加载数据
+- LOAD：从文件系统（HDFS或local）将数据加载到Apache Pig中
+    - relation_name = Load 'Input file path' USING function as schema;
+    - relation_name：存储数据关系
+    - Input file path：文件目录（file:///或hdfs://localhost:9000/）
+    - function：Pig提供的一组加载函数：BinStorage、JsonLoader、PigStorage、TextLoader
+    - schema：定义数据的模式
+
+Pig操作汇总
+- LOAD：从文件系统载入数据到一个relation
+- STORE：保存relation到文件系统
+- DUMP(\d)：输出一个relation到控制台
+- FILTER：从relation中移除指定行
+- DISTINCT：从relation中移除重复行
+- FOREACH...GENERATE：从relation中移除或新增字段
+- MAPREDUCE：使用relation作为输入，运行一个MapReduce作业
+- STREAM：使用外部程序（Python）转换relation
+- SAMPLE：从relation中采样ASSERT，确保relation满足特定条件，否则失败
+- JOIN：关联多个relation
+- COGROUP：对多个relation分组
+- GROUP：对单个relatioin分组
+- CROSS：对多个relation求叉积
+- CUBE：对relation中某些列的组合进行聚合
+- ORDER：使用relation中的一个或多个字段排序
+- RANK：给relation中的每个元祖赋一个rank值
+- LIMIT：限制relation的元祖数量
+- UNION：组合多个relation
+- SPLIT：分割多个relation
+- 执行计划：Pig脚本的物理计划，是一系列的MapReduce作业
+    - Local模式：在JVM中执行
+    - MapReduce模式：在Hadoop集群上执行
+- EXPLAIN：查看逻辑计划和物理计划
+    - explain maxTemps;
 
 ***
 
 <h4 id='4'>第四节 Pig函数操作</h4>
 
+1. 掌握Pig函数使用方法
+2. 掌握Pig函数局限性
+
+---
+
+Pig包和元祖函数
+- TOBAG()：将多个表达式转换为包
+- TOP()：获取关系的顶部N个元祖
+- TOTUPLE()：将一个或多个表达式转换为元祖
+- TOMAP()：将key-value对转换为Map
+
+Pig字符串函数
+- ENDSWITH(string, testAgainst)：验证给定字符串是否以特定子字符串结尾
+- STARTSWITH(string, substring)：接受两个字符串参数，验证第一个字符串是否以第二个字符串开头
+- SUBSTRING(string, startIndex, endIndex)：返回来自给定字符串的子字符串
+- INDEXOF(string, 'character, startIndex)：返回字符串中第一个出现的字符，从开始索引向前搜索
+
+Pig日期时间函数
+- ToDate(milliseconds)：根据给定的参数返回日期时间对象
+- CurrentTime()：返回当前时间的日期时间对象
+- GetDay(datetime)：从日期时间对象返回一个月中的某一天
+- HoursBetween(datetime1, datetime2)返回两个日期时间对象之间的小时数
+
+Pig数学函数
+- RANDOM()：获得大于等于0且小于1.0的伪随机数
+- ABS(expression)：获取表达式的绝对值
+- EXP(expression)：获取欧拉数e的x次幂
+- LOG(expression)：获取表达式的自然对数
+
 ***
 
 <h4 id='5'>第五节 Pig实现案例</h4>
 
+略
+
 ***
 
 <h4 id='6'>第六节 Pig常见问题及优化方法</h4>
+
+1. 掌握Pig常见优化方法
+2. 掌握Pig常见问题
+
+---
+
+Pig优化方法
+- 分析输入数据量大小
+- 调整shuffle大小，即Map输出的大小
+- 控制输出结果大小
+- 控制中间结果大小
+- 优化内存使用
+- 尽早使用过滤（filter)
+- 简化使用映射（foreach...generate...）
+- join优化
+    - 去掉Null
+    - 小表在前，大表在后
+    - 运用分片复制连接replicated
+    - 运用倾斜数据连接skew join
+        - 数据倾斜原因：
+            - map的结果根据hash值排序交给reduce
+            - 同一hash值会交给同一个reduce
+            - 若某个hash值出现次数远大于其他hash值，分配到该hash值的reduce执行所需时间将远大于其他reduce
+        - 一般数据倾斜会发生在group、join等操作上
+        - USING 'skewed'
+            - 先对数据进行sample
+            - 分析key分布
+            - 评估需要多少reduce
+            - 动态配置reduce任务
+            - 会启动两个mapreduce任务
+        - pig.cachedbag.memusage
+            - 为bag分配的内存百分比，默认0.18
+            - 多少key能放到内存中执行join
+        - pig.skewedjoin.reduce.memusage
+            - join过程中出现数据倾斜时，将一边数据集体化到内存中去的可使用内存百分比，默认0.39
+            - reduce阶段，key所能放到内存中的大小
+    - 运用排好顺序的数据连接merge
+        - map端join，前提是数据的join在map端要输入
+        - map数据大，过多放到map中处理，会导致内存溢出
+- Parallel Features
+    - 在脚本中，设置reduce个数 = shuffle/单个reduce能处理的大小
+    - SET default_parallel 50
+- 使用LIMIT限制返回的条数
+- 压缩数据
+    - 压缩中间结果
+        - pig.tmpfilecompression=false
+        - pig,tmpfilecompression.storage=seqfile
+        - pig.tmpfilecompression.codec=gz
