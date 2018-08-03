@@ -1,8 +1,3 @@
-1. 掌握Hadoop MapReduce高级原理
-2. 掌握Hadoop MapReduce单元测试方法
-3. 掌握Hadoop MapReduce压缩方法
-4. 掌握Hadoop MapReduce Partitioner, Combiner实现及应用
-
 # 目录 #
 
 - [第一节 MapReduce Shuffle过程](#1)

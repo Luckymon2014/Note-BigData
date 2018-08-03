@@ -2,15 +2,14 @@
 
 ## 大数据从基础到入门
 
-[实战项目——微博数据分析平台](./大数据从基础到入门/实战项目/微博数据分析平台.md)
-
 #### Java与Linux实践
+- [Linux](./大数据从基础到入门/Java与Linux实践/Linux.md)
 1. 掌握Linux基本使用方法
 2. 掌握Linux文件操作
 3. 掌握Linux用户管理
 4. 掌握Linux权限管理
 5. 能完成基础的Linux运维工作
-- [Linux](./大数据从基础到入门/Java与Linux实践/Linux.md)
+- [Java](./大数据从基础到入门/Java与Linux实践/Java.md)
 1. 掌握Java基本语法
 2. 熟练使用Java集合框架
 3. 掌握I/O基本原理及使用
@@ -18,20 +17,40 @@
 5. 掌握数据库的原理及使用
 6. 熟练使用JDBC技术完成数据库编程
 7. 完成Java开发技术的入门
-- [Java](./大数据从基础到入门/Java与Linux实践/Java.md)
 
 #### Hadoop生态体系
 
-1. 掌握大数据的核心思想
-2. 掌握Hadoop环境搭建
-3. 掌握HDFS原理、使用及Java开发
-4. 掌握MapReduce原理、使用及Java开发
 - [Hadoop 2.X入门](./大数据从基础到入门/Hadoop生态体系/Hadoop2.X入门.md)
 - [Hadoop 2.X入门进阶实战](./大数据从基础到入门/Hadoop生态体系/Hadoop2.X入门进阶实战.md)
 - [大数据文件系统之HDFS](./大数据从基础到入门/Hadoop生态体系/大数据文件系统之HDFS.md)
 - [MapReduce实战及原理](./大数据从基础到入门/Hadoop生态体系/MapReduce实战及原理.md)
+1. 掌握大数据的核心思想
+2. 掌握Hadoop环境搭建
+3. 掌握HDFS原理、使用及Java开发
+4. 掌握MapReduce原理、使用及Java开发
 - [Hadoop高级编程](./大数据从基础到入门/Hadoop生态体系/Hadoop高级编程.md)
+1. 掌握Hadoop MapReduce高级原理
+2. 掌握Hadoop MapReduce单元测试方法
+3. 掌握Hadoop MapReduce压缩方法
+4. 掌握Hadoop MapReduce Partitioner, Combiner实现及应用
 - [Pig编程实践](./大数据从基础到入门/Hadoop生态体系/Pig编程实践.md)
+1. 了解Pig发展简史
+2. 掌握Pig安装及配置
+3. 掌握Pig基本使用方法
+4. 了解Pig在生产环境中使用
+5. 能够解决Pig开发中常见的问题
+- [Hive数据仓库技术](./大数据从基础到入门/Hadoop生态体系/Hive数据仓库技术.md)
+1. 了解Hive发展简史
+2. 掌握Hive发展及配置
+3. 掌握Hive基本使用方法：HQL
+4. 了解Hive在生产环境中使用
+5. 掌握Hive高级特性：存储过程，Index等
+6. 掌握Hive调优
+7. 掌握Hive2.0特性
+8. 能够解决Hive开发中常见的问题
+
+[实战项目——微博数据分析平台](./大数据从基础到入门/实战项目/微博数据分析平台.md)
+
 
 ----------
 
