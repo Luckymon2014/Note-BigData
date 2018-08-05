@@ -297,9 +297,225 @@ DML语句
 
 <h4 id='5'>第五节 Hive常见函数</h4>
 
+1. 了解Hive函数使用
+2. 掌握在HQL中使用函数
+
+---
+
+- 查询hive函数表：show functions;
+
+Hive函数分类
+- 内置函数
+    - 简单函数-map
+        - todate
+        - tochar
+    - 聚合函数-reduce
+        - sum
+    - 集合函数-map
+        - join
+    - 特殊函数
+- 自定义函数
+    - UDF-map
+    - UDAF-reduce
+
+Hive时间函数
+- unix_timestamp()：返回当前时间的unix时间戳
+- from_unixtime(bigint unixtime[, string format])：时间戳转日期函数
+- unix_timestamp(string date)：返回指定日期格式的时间，date的形式必须为“yyyy-MM-dd HH:mm:ss”
+- unix_timestamp(string date, string pattern)：返回指定日期格式的时间戳
+- to_date(string date)：返回时间字段中的日期部分
+- year(string date)：返回时间字段中的年
+- month(string date)：返回时间字段中的月
+- day(string date)：返回时间字段中的日
+
+Hive数学函数
+- round(a)：四舍五入的BIGINT值
+- log([a,]b)：a默认是e
+- sqrt(double/decimal a)
+- abs(a)
+- count/sum/avg/min/max
+    - 聚合函数，会触发MapReduce
+
+Hive字符串处理函数
+- ltrim/rtrim(string A)：去掉空格
+- concat(A, B, ...)：连接字符串
+- substr/substring(A, int start, int end)
+- upper/ucase/lower/lcase(A)
+
+Hive Xpath函数
+- Xpath是一种语言，专门解析XML的内容
+- xpath：解析XML函数
+- xpath_string：解析字符串类型XML函数
+- xpath_Boolean：解析boolean类型XML函数
+    - 判断是否存在标签
+- xpath_short/int/long：解析整数类型XML函数
+- xpath_float/double/number：解析小数类型XML函数
+    - 不是数字，返回NaN
+
 ***
 
 <h4 id='6'>第六节 Hive自定义函数</h4>
+
+1. 了解Hive HUF、UDAF函数使用
+2. 掌握在HQL中使用自定义函数
+
+---
+
+Hive UDF(User Define Function)
+- 单输入、单输出（如substr等函数）
+- 开发方式
+    - 继承org.apache.hadoop.hive.ql.exec.UDF（已废除）
+    - 继承org.apache.hadoop.hive.ql.udf.generic.GenericUDF
+- 开发过程
+    1. 按照GenericUDF的类，实现我们想要的功能
+    2. 将jar包放入HDFS集群：hdfs dfs -put xxx.jar /
+        - 本地也可以，但是一般都是在分布式集群上执行
+    3. hive shell/client：add jar ...
+    4. create tempory function func as 'com.udf.....Demo'
+        - 临时函数，只对当前session有效
+    5. select func(arguments) from ...;
+    6. drop tempory function func;
+
+```
+public class Demo extends GenericUDF {
+    
+    // 计算函数
+    // select func(arguments, arguments, ...) from table;
+    abstract Object evaluate(GenericUDF.DeferredObject[] arguments);
+
+    // 描述函数
+    abstract String getDisplayString(String[] children);
+
+    // 初始化
+    abstract ObjectInspector initialize(ObjectInspector[] arguments);
+}
+```
+
+```
+public class GenderToNumber extends GenericUDF {
+	
+	// 转化HQL中的入参
+	private ObjectInspectorConverters.Converter[] converters;
+
+	@Override
+	public Object evaluate(DeferredObject[] arguments) throws HiveException {
+		if (null == arguments[0].get())
+			return null;
+		
+		String gender = (String) converters[0].convert(arguments[0].get());
+		return stringToNumber(gender);
+	}
+	
+	/**
+	 * 自定义方法
+	 * @param gender
+	 * @return
+	 */
+	protected String stringToNumber(String gender) {
+		if (gender.equalsIgnoreCase("male"))
+			return "1";
+		else
+			return "2";
+	}
+
+	@Override
+	public String getDisplayString(String[] arg0) {
+		return "function description";
+	}
+
+	// select function(gender);
+	@Override
+	public ObjectInspector initialize(ObjectInspector[] arguments) throws UDFArgumentException {
+		// 校验入参长度
+		if (arguments.length != 1)
+			throw new UDFArgumentException("arguments is not right! \n "
+					+ "e.q: select function(gender);");
+		
+		// 转化入参，将参数存入converters
+		converters = new ObjectInspectorConverters.Converter[arguments.length];
+		for (int i=0; i<arguments.length; i++) {
+			// 初始化converters，将入参转化为Java字符串类型
+			converters[i] = ObjectInspectorConverters.getConverter(arguments[i], PrimitiveObjectInspectorFactory.javaStringObjectInspector);
+		}
+		
+		// 返回Java字符串类型的值
+		return PrimitiveObjectInspectorFactory.getPrimitiveJavaObjectInspector(PrimitiveObjectInspector.PrimitiveCategory.STRING);
+	}
+
+}
+```
+
+Hive UDAF
+- 自定义聚合函数，零到多行输入，单输出
+- 开发方式
+    - org.apache.hadoop.hive.ql.udf.generic.AbstractGenericUDAFResolver
+    - org.apache.hadoop.hive.ql.udf.generic.GenericUDAFEvaluator
+    - org.apache.hadoop.hive.ql.exec.NumericUDAF
+```
+public class UDAFSum extends NumericUDAF {
+    public static class Evaluator implements UDAFEvaluator {
+        // 初始化
+        public void init() {}
+        // map阶段聚合
+        public boolean iterate (DoubleWritable 0) {}
+        // 无参数，类似hadoop的combiner，为iterate函数轮转结束后，返回部分聚合数据的持久化
+        public DoubleWritable terminatePartial()
+        // reduce阶段聚合
+        public boolean merge(DoubleWritable o) {}
+        // 返回最终的聚集函数结果
+        public DoubleWritable terminate() {}
+    }
+}
+```
+
+```
+public class UDAFSum extends NumericUDAF {
+	
+	public static class Evaluator implements UDAFEvaluator {
+
+		private boolean empty;
+		private double sum;
+
+		// 初始化参数
+		public void init() {
+			sum = 0;
+			empty = true;
+		}
+		
+		public Evaluator() {
+			super();
+			init();
+		}
+		
+		// select sum(o);
+		// mapper
+		public boolean iterate(DoubleWritable o) {
+			if (null != o) {
+				sum += o.get();
+				empty = false;
+			}
+			return true;
+		}
+		// combiner
+		public DoubleWritable terminatePartial() {
+			return empty? null: new DoubleWritable(sum);
+		}
+		// reducer
+		public boolean merge(DoubleWritable o) {
+			if (null != o) {
+				sum += o.get();
+				empty = false;
+			}
+			return true;			
+		}
+		// final combine
+		public DoubleWritable terminate() {
+			return empty? null: new DoubleWritable(sum);			
+		}
+	}
+
+}
+```
 
 ***
 
