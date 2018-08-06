@@ -11,7 +11,7 @@
 -[第九节 Hive Update,Delete操作说明](#9)
 -[第十节 Hive ORCFile,Parquet 文件格式实践](#10)
 -[第十一节 Hive 数据压缩及解决数据倾斜](#11)
--[第十二节 Hive JDBC实践V1](#12)
+-[第十二节 Hive JDBC实践](#12)
 Hive微博分析大数据平台数据仓库设计
 Hive实现KOL分析
 Hive实现声量分析
@@ -521,22 +521,263 @@ public class UDAFSum extends NumericUDAF {
 
 <h4 id='7'>第七节 Hive2.0存储过程实践</h4>
 
+1. 掌握Hive2.0存储过程说明
+2. 掌握Hive2.0存储过程使用
+
+---
+
+Hive2.0存储过程说明
+- Hive从2.0开始支持存储过程HPL/SQL
+- 支持Oracle PL/SQL、ANSI/ISO SQL/PSM(IBM DB2, MySQL, Teradata...)、PostgreSQL PL/pgSQL(Netezza)、Transact-SQL(Microsoft SQL Server and Sybase)
+
+Hive2.0存储过程使用
+```
+CREATE FUNCTION test(context STRING) RETURNS STRING
+BEGIN
+    RETURN 'Hello,'||context||'!';
+END;
+
+FOR item IN (
+    SELECT id,name FROM a limit 10
+)
+LOOP
+    PRINT a.id||'|'||a.name||'|'||test(a.name);
+END LOOP;
+```
+- ./hplsql -f text.sql
+1. 安装Hive2.0以上版本
+2. 安装MySQL
+3. 配置Hive2.0
+4. hplsql-site.xml
+5. 初始化hive2.0
+    - schematool -dbType mysql -initSchema
+
+```
+create procedure set_value(IN arg STRING)
+begin
+    set value = 'hello'
+    print value || ',' || arg;
+end;
+```
+- hplsql -f ~/hplpro.sql -main set_value
+
 ***
 
 <h4 id='8'>第八节 Hive Index原理及使用</h4>
+
+1. 了解Hive Index原理
+2. 掌握在Hive中使用Index
+
+---
+
+Hive Index
+- 索引：提高Hive表指定列的查询速度
+- 增加索引，会消耗额外的资源去创建索引，需要更多的磁盘空间存储索引
+- Hive0.7.0版本加入了索引，Hive0.8.0增加了bitmap索引
+    - CompactIndexHandler(压缩索引)：通过将列中相同的值的字段进行压缩，从而减小存储和加快访问时间
+    - Bitmap(位图索引)：如果索引列只有固定的几个值，可以采用位图索引来加速查询，可以方便的进行AND/OR/XOR等各类计算
+        - 数字不适合用位图索引
+        - 同时存在位图索引和压缩索引，优先选择位图索引
+
+索引原理
+- 在指定列上建立索引，会产生一张索引表（Hive的一张物理表），里面的字段包扣：索引列的值、该值对应的HDFS文件路径、该值在文件中的偏移量
+- 在执行索引字段查询的时候，首先额外生成一个MR job，根据对索引列的过滤条件，从索引表中过滤出索引列的值对应的HDFS文件路径及偏移量，输出到HDFS上的一个文件中，然后根据这些文件中的HDFS路径和偏移量，筛选原始input文件，生成新的split，作为整个job的split，这样就达到不用全表扫描的目的
+
+Hive Index使用
+1. 创建压缩索引
+    ```
+    create index index_name on table table_name(key) 
+    as 'org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler' 
+    with deferred rebuild;
+    ```
+    ```
+    create index index_name on table table_name(key) 
+    as 'BITMAP' with deferred rebuild;
+    ```
+2. 生成索引数据
+    ```
+    alter index index_name on table_name rebuild;
+    ```
+    - 如果表数据更新了，需要重建索引
+3. 查看索引
+    ```
+    show index on table_name;
+    ```
+4. 设置查询时索引自动生效
+    ```
+    set hive.input.format = org.apache.hadoop.hive.ql.io.HiveImputFormat;
+    set hive.optimize.index.filter = true;
+    set hive.optimize.index.filter.compact.minsize = 0;
+    ```
 
 ***
 
 <h4 id='9'>第九节 Hive Update,Delete操作说明</h4>
 
+1. 了解Hive Update,Delete原理
+2. 掌握在Hive中使用Update,Delete
+
+---
+
+Hive Update,Delete配置
+- hive.support.concurrency = true
+- hive.enforce.bucketing = true
+- hive.exec.dynamic.partition.mode = nonstrict
+- hive.txn.manager = org.apache.hadoop.hive.ql.lockmgr.DbTxnManager
+- hive.compactor.innitiator.on = true
+- hive.compactor.worker.threads = 1
+
+- 输出必须是AcidOutputFormat，必须分桶
+- 只有ORCFileformat支持AcidOutputFormat
+- 建表时必须指定参数('transactional'='true')
+
+```
+create table table_name(value type, value type...) clustered by (key) into 2 buckets stored as orc TBLPROPERTIES('transactional'='true');
+```
+
+- map的个数与桶的个数一致
+
 ***
 
 <h4 id='10'>第十节 Hive ORCFile,Parquet 文件格式实践</h4>
+
+1. 了解Hive ORCFile、Parquet File原理
+2. 掌握在Hive中使用ORCFile、ParquetFile
+
+---
+
+Hive文件存储格式
+- Hive文件存储格式主要用来增加查询效率
+- 分类：TextFile、ORCFile、Parquet
+- 生产环境中，综合使用这几种文件格式
+
+Hive ORCFile
+- hive/spark都支持这种存储格式，存储的方式：数据按照行分块，每个块按照列存储，其中每个块都存储有一个索引
+    - 按行水平切割，再按列垂直切割
+    - 针对不同列，采用特定的编码特点
+        - 编码格式：bit、增量、字典、游程
+            - 如：String类型，会用字典编码
+            - 编码格式是可选的
+    - 最后对编码以后的数据进行压缩
+        - 压缩格式：zlib、snappy、lzo等
+- 特点：数据压缩率非常高
+- 对每一列，采用Stream存储
+    - String列，如果字典编码，会有4个stream：present stream、data stream、dictionary stream、length stream
+- 索引：包含min、max、avg、count等信息
+- Bloomfilter(粗过滤)
+- ORC表不能通过LOAD加载数据，需要从另一张表导入
+
+```
+create table orc_table (val type, ...) 
+stored as orc 
+tblproperties('orc.compress'='SNAPPY');
+```
+
+Hive Parquet
+- Parquet是一种行式存储，同时具有很好的压缩性能，同时可以减少大量的表扫描和反序列化的时间
+- 由多个Row Group组成
+- 在Row Group中先按列来分段
+- 然后按列的数据（行）继续切割
+- 然后再对数据进行编码
+- 参考自Google的Dremel技术，数据结构复杂，支持深度嵌套
+
+```
+create table parquet_table (val type, ...) 
+stored as parquet;
+```
+
+- ORC、Parquet建表时不需要指定分隔符，适合没有分隔符的文件
+- ORC、Parquet都是提高查询性能的技术，也能减少文件大小
+- ORC相对比较流行，Parquet相对更耗CPU，需要在上线前进行测试：文件大小、性能
 
 ***
 
 <h4 id='11'>第十一节 Hive 数据压缩及解决数据倾斜</h4>
 
+1. 了解Hive数据倾斜原理
+2. 掌握在Hive中使用数据压缩技术
+3. 掌握Hive数据倾斜技术及调优
+
+---
+
+Hive压缩技术
+- 主要目的是：提升IO，降低存储空间消耗
+- 开启压缩
+    - map输出压缩
+        ```
+        set hive.exec.compress.intermediate=true
+        set mapreduce.map.output.compress=true
+        set mapreduce.map.output.compress.codec=org.apache.hadoop.io.compress.SnappyCodec
+        ```
+        - 推荐在sql中添加，不要写在配置文件中，除非需要全局生效
+    - reduce压缩
+        ```
+        set hive.exec.compress.output=true
+        set mapreduce.output.fileoutputformat.compress=true
+        set mapreduce.output.fileoutputformat.compress.codec=org.apache.hadoop.il.compress.SnappyCodec
+        ```
+
+Hive数据倾斜
+- 数据倾斜：进行分布式计算过程汇总，数据的分散度不够，导致计算集中在某些服务器上，导致计算资源利用度不够
+- 现象：某些机器上的任务非常慢，某些很快执行完毕
+- 产生原因：
+    - Shuffle阶段，Map的结果中同一个Key分配到同一个Reduce上，Key分布不均衡导致Reduce的任务不均衡
+    - 产生数据倾斜的操作
+
+        关键词|情形|后果
+        -----|----|----
+        Join|其中一个表较小，但是key集中|分发到某一个或几个Reduce上的数据远高于平均值
+        Join|大表与大表，但是分桶的判断字段0值或空值过多|这些空值都是由一个Reduce处理，非常慢
+        Group by|group by维度过小，某值的数量过多|处理某值的Reduce非常耗时
+        Count Distinct|某特殊值过多|处理此特殊值的Reduce耗时
+
+Hive数据倾斜优化
+- 参数调优
+    - Join操作：set hive.optimize.skewjoin.compiletime=true
+    - GroupBy操作：set hive.groupby.skewindata=true
+    - Join的键对应的记录条数超过这个值，则进行优化：set hive.skewjoin.key=100000
+    - Map Join：set hive.map.aggr=true
+        - select /*+ MAPJOIN(b)*/ a.key,a.value from a join b on a.key=b.key;
+    
+    - reduce处理数据量（默认1G=1000000000）：hive.exec.reducers.bytes.per.reducer
+    - 最大reduce个数（默认1009）：hive.exec.reducers.max
+    - 设置reduce个数=min(参数2(1009),map端输出数量总量/参数1(1G))：mapreduce.job.reduces
+- 小表与大表关联
+    - 将小表刷入内存：set hive.auto.convert.join=true;
+    - 刷入内存表的字节数：set hive.mapjoin.smalltable.filesize=350000;
+- 转换数据类型
+    ```
+    select * from test a left outer join logs b on a.id = cast(b.id as string)
+    ```
+- sum() group by替换count(distinct)
+    ```
+    select x, count(distinct y) as c from test group by x;
+    -- 改写为
+    select x, count(*) as c from (select distinct x, y from test) group by x;
+    ```
+- 空值数据倾斜：Join时，尽量避免null参与关联
+    ```
+    ... where val is not null
+    ```
+
 ***
 
-<h4 id='12'>第十二节 Hive JDBC实践V1</h4>
+<h4 id='12'>第十二节 Hive JDBC实践</h4>
+
+1. 了解Hive JDBC实现方式
+2. 掌握在Java中调用JDBC
+
+---
+
+Hive JDBC配置
+- Java程序Client → Thrift服务 → JDBC
+- Port number of HiveServer2 Thrift interface：hive.server2.thrift.port=10000
+- Bind host on which to run the HiveServer2 Thrift interface：hive.server2.thrift.bind.host=0.0.0.0
+- 启动JDBC：nohup ./bin/hive --service hiveserver2 &
+
+Hive JDBC JAVA
+1. 启动metastore服务
+2. 启动HiveServer2
+- !connect jdbc:hive2://hadoop001:10000/default
+
+
