@@ -12,12 +12,6 @@
 -[第十节 Hive ORCFile,Parquet 文件格式实践](#10)
 -[第十一节 Hive 数据压缩及解决数据倾斜](#11)
 -[第十二节 Hive JDBC实践](#12)
-Hive微博分析大数据平台数据仓库设计
-Hive实现KOL分析
-Hive实现声量分析
-Hive实现微博情感分析
-Hive实现用户微博热度分析
-Hive微博发帖终端分析
 
 ***
 
@@ -778,6 +772,50 @@ Hive JDBC配置
 Hive JDBC JAVA
 1. 启动metastore服务
 2. 启动HiveServer2
+- beeline（替代hive，用jdbc查询，简化日志信息）
 - !connect jdbc:hive2://hadoop001:10000/default
 
+```
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
+public class HiveJDBCTest {
+	public static final String HIVE_DRIVER = "org.apache.hive.jdbc.HiveDriver";
+	public static final String HIVE_URL = "jdbc:hive2://hadoop001:10000";
+	public static final String USER_NAME = "root";
+	public static final String PASSWORD = "root";
+	public static final String DB_STRING = "school";
+	
+	public static void main(String[] args) {
+		Connection conn = null;
+		PreparedStatement pstmt = null;
+		ResultSet rs = null;
+		
+		try {
+			Class.forName(HIVE_DRIVER);
+			conn = DriverManager.getConnection(HIVE_URL + "/" + DB_STRING);
+			pstmt = conn.prepareStatement("show tables");
+			rs = pstmt.executeQuery();
+			
+			while(rs.next() != false) {
+				System.out.println(rs.getRow());
+			}			
+			
+		} catch (ClassNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+}
+```
+
+Hive JDBC HA
+- Hive从0.14开始，使用Zookeeper实现了HiveServer2的HA功能（ZooKeeper Service Discovery）
+- Client端可以通过指定一个nameSpace来连接HiveServer2，而不是指定某一个host和port
+    - ZooKeeper相当于保存了一个配置列表，当其中一个节点挂了的时候，会自动选择到其他节点去连接
