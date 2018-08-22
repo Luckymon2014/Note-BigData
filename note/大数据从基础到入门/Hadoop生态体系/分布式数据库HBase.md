@@ -912,10 +912,119 @@ HBase BloomFilter原理
 
 <h4 id='9'>第九节 HBase与Hive协同工作</h4>
 
+1. 掌握HBase与Hive协同工作方法
+2. 掌握HBase与Hive工作原理
+
+---
+
+Hive与HBase整合原理
+- 利用两者本身对外的API接口互相进行通信
+- 依靠hive-hbase-handler.jar工具类
+- 性能一般，不适合实时的大规模的分析
+
+Hive与HBase整合使用场景
+- 需要将Hive数据加载到HBase中，数据源可以是文件，也可以是Hive中的表
+- 需要HBase支持Join、Group等SQL查询语法
+- 需要同时完成HBase的数据实时查询，也需要Hive查询HBase中的数据完成复杂的数据分析
+
+Hive与HBase整合步骤
+- Jar包处理
+	- 将Hive/lib下的hive-hbase-handler复制到HBase/lib
+	- 将HBase/lib下的*.jar复制到Hive/lib
+		- yes|cp -r \$HBASE_HOME/lib/*.jar \$HIVE_HOME/lib/
+	- 将MySQL的mysql-connector-jara-*.jar复制到Hive/lib
+- Hive启动：MeatStore、HiveServer2
+- 在Hive中创建表，映射到HBase中的表
+
+```
+# create hbase table with hbase shell
+create '表名','列族'
+
+# create hive table with beeline
+create external table tbl_name(col1, col2, ...)
+stored by 'org.apache.hadoop.hive.hbase.HBaseStorageHandler' with serdeproperties("hbase.columns.mapping"=":key, 列族:列名...")
+tblproperties("hbase.table.name"="表名")
+```
+- Hive与HBase连接，一定要用外部表
+- 要注意字段类型，如果对应不上，反序列化会有问题
+
 ***
 
 <h4 id='10'>第十节 HBasePhoneix</h4>
 
+1. 掌握HBase Phoenix安装与使用
+2. 了解HBase Phoenix常见问题
+
+---
+
+什么是Phoenix
+- Saleforce（云SaaS CRM公司）开发
+- 将HBase API查询转换成SQL查询
+- 特点
+	- 查询引擎
+	- 元数据仓库
+	- 嵌入式JDBC驱动
+	- 只针对HBase数据
+- 使用了Endpoint开发了聚合函数等，部署在Server端，性能上比MapReduce更好一些
+
+Phoenix数据模型
+- 通过关系词映射HBase数据类型
+	- Primary Key Constraint = Row Key
+	- Key Value Columns = Qualifier
+
+安装
+- 略
+
+启动
+- sqlline.py [zookeeper地址(hadoop001:2181)]
+
+使用脚本执行
+- psql.py hadoop001:2181 test.sql
+
 ***
 
 <h4 id='11'>第十一节 HBase表结构设计案例</h4>
+
+1. 掌握表结构设计优化方法
+2. 掌握HBase表结构设计案例
+
+---
+
+表结构
+- 行键 RowKey
+- 时间戳 Timestamp
+- 列族 ColumnFamily
+	- 列 Column
+
+优化方法
+- 列族数量最好不要超过3个
+	- 当某个列族Flush后，其他列族也会Flush
+	- 假设CF A有一百万数据，CF B有一千万数据，CF A数据会随着CF B传播，导致增大很多数据
+- RowKey长度控制，最大长度是64KB，建议设计成定长10-100byte
+	- HFile中，会按照column冗余存储RowKey
+		- 例：2000w数据，rowkey占用字节为20亿字节，2GB
+		- 因此RowKey越短越好
+	- MemStore内存占用
+	- 与64位操作系统对应，建议设计成8字节的倍数
+		- 如：64byte
+- Bloom Filters
+	- 提高随机读的性能，控制粒度如下：
+		- Row（默认实现）：根据KeyValue中的row来过滤storeFile
+		- RowCol：根据KeyValue中的row+qualifier来过滤storeFile
+
+RowKey热点问题
+- RowKey排序逻辑
+	- 按RowKey，Column key（column family和qualifier）和TimeStamp的ASCII排序
+	- 先按RowKey升序，RowKey相同则按column key升序，column key相同则按timestamp降序
+- RowKey热点问题
+	- 由于数据分布比较接近，导致数据过于集中在某些RegionServer中，导致数据不均衡
+	- 常见的容易出现热点的数据：时间上连续的数据、有明显分布特征的数据、用户ID及手机号等等
+- RowKey设计
+	- 增加随机key（key-RowKey），key的数量根据Region数量决定
+		- 缺点：查询时必须知道随机数的生成规则，拼接后查询
+	- 反转固定长度或者数字格式key
+		- 如：手机号倒序存储
+		- 缺点：牺牲了数据的有序性
+	- HASH、MD5等
+		- 优点：方便值查找(GET)
+		- 缺点：不方便Scan
