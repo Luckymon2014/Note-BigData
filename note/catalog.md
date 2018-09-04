@@ -74,6 +74,11 @@
 1. 熟练掌握Scala函数式编程
 2. 熟练掌握Scala中的集合
 3. 熟练掌握Scala的高级特性
+- [Spark原理](./大数据从基础到入门/Spark核心架构/Spark原理.md)
+1. 什么是Spark？Spark的特点
+2. 掌握Spark的体系架构和安装部署
+3. 学会执行Spark应用程序
+4. 掌握Spark的运行机制
 
 ----------
 
