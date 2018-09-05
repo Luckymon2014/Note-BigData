@@ -144,31 +144,183 @@ spark-shell
     bin/spark-shell --master spark://hadoop001:7077
     ```
 - 例：执行wordcount
-```
-sc.textFile("hdfs://hadoop:9000/test.txt").flatMap(_.split(" ")).map((_,1)).reduceByKey(_+_).collect
+    ```
+    sc.textFile("hdfs://hadoop001:9000/test.txt").flatMap(_.split(" ")).map((_,1)).reduceByKey(_+_).collect
 
-// 拆解
-// 1. 获取每一行的文字
-val rdd1 = sc.textFile("hdfs://hadoop:9000/test.txt")
-rdd1.collect // 真正执行计算
-// 按空格分割，获取每个单词
-val rdd2 = rdd1.flatMap(_.split(" "))
-rdd2.collect
-// 每个单词计数1
-val rdd3 = rdd2.map((_,1))
-rdd3.collect
-// 对每个单词进行累加
-val rdd4 = rdd3.reduceByKey(_+_)
-rdd4.collect
-```
+    // 拆解
+    // 1. 获取每一行的文字
+    val rdd1 = sc.textFile("hdfs://hadoop001:9000/test.txt")
+    rdd1.collect // 真正执行计算
+    // 按空格分割，获取每个单词
+    val rdd2 = rdd1.flatMap(_.split(" "))
+    rdd2.collect
+    // 每个单词计数1
+    val rdd3 = rdd2.map((_,1))
+    rdd3.collect
+    // 对每个单词进行累加
+    val rdd4 = rdd3.reduceByKey(_+_)
+    rdd4.collect
+    ```
     - RDD就是一个集合
     - RDD存在依赖关系
     - RDD是类，有些方法不会触发计算，有些会触发
+    - 需要用collect真正的触发计算
 
-开发Spark WordCount
+开发Spark程序（WordCount）
 - Java
+    ```
+    package demo;
+
+    import org.apache.spark.SparkConf;
+    import org.apache.spark.api.java.JavaPairRDD;
+    import org.apache.spark.api.java.JavaRDD;
+    import org.apache.spark.api.java.JavaSparkContext;
+    import org.apache.spark.api.java.function.FlatMapFunction;
+    import org.apache.spark.api.java.function.Function2;
+    import org.apache.spark.api.java.function.PairFunction;
+    import scala.Tuple2;
+
+    import java.util.Arrays;
+    import java.util.Iterator;
+    import java.util.List;
+
+    /**
+    * 使用spark-submit提交任务
+    * bin/spark-submit --master spark://hadoop001:7077 --class demo.JavaWordCount [jar dir] [filepath on hdfs://hadoop001:9000]
+    */
+    public class JavaWordCount {
+
+        public static void main(String[] args) {
+            // 配置参数
+            SparkConf conf = new SparkConf().setAppName("JavaWordCount");
+    //        SparkConf conf = new SparkConf().setAppName("JavaWordCount").setMaster("local");
+            // 创建SC对象
+            JavaSparkContext sc = new JavaSparkContext(conf);
+
+            // 读取数据
+            JavaRDD<String> datas = sc.textFile("hdfs://hadoop001:9000" + args[0]);
+    //        JavaRDD<String> datas = sc.textFile("hdfs://hadoop001:9000/test.txt");
+            // 分词
+            JavaRDD<String> words = datas.flatMap(
+                    /**
+                    * 参数一:输入文本
+                    * 参数二:分词后的每个单词
+                    */
+                    new FlatMapFunction<String, String>() {
+                        @Override
+                        public Iterator<String> call(String line) throws Exception {
+                            return Arrays.asList(line.split(" ")).iterator();
+                        }
+                    });
+            // Map:每个单词计数为1
+            JavaPairRDD<String, Integer> wordOne = words.mapToPair(
+                    /**
+                    * 参数一:输入的每个单词
+                    * 参数二、三:Map的输出(单词,1)
+                    */
+                    new PairFunction<String, String, Integer>() {
+                        @Override
+                        public Tuple2<String, Integer> call(String word) throws Exception {
+                            return new Tuple2<String, Integer>(word, 1);
+                        }
+                    });
+            // Reduce:每个单词的value求和
+            JavaPairRDD<String, Integer> count = wordOne.reduceByKey(
+                    /**
+                    * 参数一、二:key相同的value
+                    * 参数三:运算结果
+                    */
+                    new Function2<Integer, Integer, Integer>() {
+                        @Override
+                        public Integer call(Integer a, Integer b) throws Exception {
+                            return a + b;
+                        }
+                    });
+
+            // 触发计算
+            List<Tuple2<String, Integer>> result = count.collect();
+
+            // 输出
+            for (Tuple2<String, Integer> r : result) {
+                System.out.println(r._1 + ", " + r._2);
+            }
+
+            // 停止sc对象
+            sc.stop();
+        }
+
+    }
+    ```
 - Scala
+    ```
+    package demo
+
+    import org.apache.spark.{SparkConf, SparkContext}
+
+    /**
+    * 使用spark-submit提交任务
+    * bin/spark-submit --master spark://hadoop001:7077 --class demo.JavaWordCount [jar dir] [filepath on hdfs://hadoop001:9000] [resultPath on hdfs://hadoop001:9000]
+    */
+    object ScalaWordCount {
+        def main(args: Array[String]): Unit = {
+            // 配置参数
+            val conf = new SparkConf().setAppName("ScalaWordCount").setMaster("local")
+            // 创建SC对象
+            val sc = new SparkContext(conf)
+
+            val count = sc.textFile("hdfs://hadoop001:9000" + args(0)).flatMap(_.split(" ")).map((_, 1)).reduceByKey(_+_)
+            // 结果保存到HDFS
+            count.repartition(1) // 进行重分区，设定输出文件数量为1
+                .saveAsTextFile("hdfs://hadoop001:9000" + args(1)) // 和collect一样，会触发计算，并保存到hdfs上
+
+
+        //    // 执行WordCount
+        //    val result = sc.textFile("hdfs://hadoop001:9000/test.txt") // 读取数据
+        //      .flatMap(_.split(" ")) // 分词
+        //      .map((_,1)) // Map:每个单词计数为1
+        //      .reduceByKey(_+_) // Reduce:每个单词的value求和
+        //      .collect // 触发计算
+        //
+        //    // 输出
+        //    result.foreach(println)
+
+            // 停止SC对象
+            sc.stop()
+        }
+    }
+    ```
 
 ***
 
 <h4 id='4'>第四节 Spark运行机制及原理分析</h4>
+
+1. WordCount执行的流程分析
+2. Spark提交任务的流程
+
+---
+
+WordCount程序数据处理流程
+- textFile("...")
+    - 产生两个RDD
+    - 1. HadoopRDD<k1,v1>
+        - k1:偏移量(该行之前有多少个字节)
+        - v1:数据(该行的数据)
+        → 取出v1
+    - 2. map(pair => pair._2.toString)
+        - 返回MapPartitionsRDD<value>(所有行的数据)
+- flatMap(.split(" "))
+    1. 进行分词操作
+    2. 调用flatMap压平操作
+        - 放到同一个数组中
+- map((_, 1))
+    - 对上一步的RDD中的每个元素（单词），记一次数，返回(word, 1)
+- reduceByKey(\_+_)
+    1. 对上一步的RDD中的每个元素，按照key进行分组操作，返回(k3,v3)
+        - k3:key，即单词
+        - v3:value的集合，例：(1,1,...)
+    2. "\_+_"
+        - 把同组中的value进行求和
+![](./wordcount数据处理的流程.png)
+
+Spark提交任务的流程
+![](./Spark提交任务的流程.png)
