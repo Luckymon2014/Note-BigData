@@ -83,6 +83,18 @@
 1. 掌握什么是RDD
 2. 掌握RDD的特点及其算子的使用
 
+#### Spark SQL 2.X
+- [SparkSQL核心编程](./大数据从基础到入门/SparkSQL2.X/SparkSQL核心编程.md)
+1. 了解什么是SparkSQL，SparkSQL的特点
+2. 运用使用SparkSQL进行数据分析
+3. 掌握SparkSQL常用的数据源
+4. 掌握SparkSQL编程
+- [SparkSQL综合实战](./大数据从基础到入门/SparkSQL2.X/SparkSQL综合实战.md)
+1. 掌握在SparkSQL中使用不同的数据源
+2. 掌握在IDE环境中开发Spark
+3. 了解优化SparkSQL的性能
+- [用户自定义函数](./大数据从基础到入门/SparkSQL2.X/用户自定义函数.md)
+
 ----------
 
 # 机器学习

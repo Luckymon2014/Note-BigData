@@ -333,3 +333,178 @@ rdd43.partitions.length
 ***
 
 <h4 id='1'>第三节 Spark编程案例</h4>
+
+案例一：求网站的访问量
+```
+object MyWebCount {
+
+  def main(args: Array[String]): Unit = {
+    val conf = new SparkConf().setAppName("WebCount").setMaster("local")
+    val sc = new SparkContext(conf)
+
+    val result = sc.textFile("...").map( // 对每一行进行处理
+      line => {
+        // 从文本中解析出key
+        val index1 = line.indexOf("\"")
+        val index2 = line.lastIndexOf("\"")
+        var key = line.substring(index1 + 1, index2)
+        val index3 = key.indexOf(" ")
+        val index4 = key.lastIndexOf(" ")
+        key = key.substring(index3 + 1, index4)
+        key = key.substring(key.lastIndexOf("/") + 1)
+        // 每个key计数为1
+        (key, 1)
+      }
+    ).reduceByKey( // 按照key进行聚合操作
+      _+_
+    ).sortBy( // 对聚合结果进行排序
+      _._2, false // false:降序排序
+    ).take(2) // 取出排名前2的数据
+    .toBuffer // 转换成(String, Int)的元祖
+
+    // 输出
+    println(result)
+
+    sc.stop()
+  }
+
+}
+```
+
+案例二：创建自定义分区
+```
+import org.apache.spark.{Partitioner, SparkConf, SparkContext}
+
+import scala.collection.mutable
+
+object MyWebPartition {
+
+  def main(args: Array[String]): Unit = {
+    // 设置环境变量，使得hadoop在windows能导出分区文件
+    System.setProperty("hadoop.home.dir", "...hadoop home on windows...")
+
+    val conf = new SparkConf().setAppName("WebPartition").setMaster("local")
+    val sc = new SparkContext(conf)
+
+    val rdd1 = sc.textFile("...").map( // 对每一行进行处理
+      line => {
+        // 从文本中解析出key
+        val index1 = line.indexOf("\"")
+        val index2 = line.lastIndexOf("\"")
+        var key = line.substring(index1 + 1, index2)
+        val index3 = key.indexOf(" ")
+        val index4 = key.lastIndexOf(" ")
+        key = key.substring(index3 + 1, index4)
+        key = key.substring(key.lastIndexOf("/") + 1)
+        // 将line记录为日志
+        (key, line)
+      }
+    )
+
+    // 得到所有key，并对key去重
+    val rdd2 = rdd1.map(_._1).distinct().collect()
+
+    // 创建自定义的分区器
+    val myPartitioner = new MyPartitioner(rdd2)
+
+    // 建立分区
+    val rdd3 = rdd1.partitionBy(myPartitioner)
+
+    // 输出
+    rdd3.saveAsTextFile("...Output Filepath...") // 输出路径不能已存在
+
+    sc.stop()
+  }
+
+}
+
+// 根据rdd2，建立分区规则
+class MyPartitioner(allKey:Array[String]) extends Partitioner {
+  // 定义一个Map(key, partitionID)集合，保存分区的条件
+  val partitionMap = new mutable.HashMap[String, Int]()
+  // 根据构造参数，初始化分区规则，放入map集合
+  var partID = 0
+  for (name <- allKey) {
+    partitionMap.put(name, partID)
+    partID += 1
+  }
+
+  // 返回分区的个数
+  override def numPartitions: Int = partitionMap.size
+
+  // 建立分区
+  override def getPartition(key: Any): Int = {
+    // 根据key，得到对应的分区号
+    partitionMap.getOrElse(key.toString, 0) // 放入key对应的分区，若map中未找到key，放入分区0
+  }
+}
+```
+
+案例三：访问数据库
+```
+import java.sql.{Connection, DriverManager, PreparedStatement}
+
+import org.apache.spark.{SparkConf, SparkContext}
+
+object MyWebCountToOracle {
+
+  def main(args: Array[String]): Unit = {
+    System.setProperty("hadoop.home.dir", "...hadoop home on windows...")
+
+    val conf = new SparkConf().setAppName("WebCount").setMaster("local")
+    val sc = new SparkContext(conf)
+
+    val result = sc.textFile("...").map( // 对每一行进行处理
+      line => {
+        // 从文本中解析出key
+        val index1 = line.indexOf("\"")
+        val index2 = line.lastIndexOf("\"")
+        var key = line.substring(index1 + 1, index2)
+        val index3 = key.indexOf(" ")
+        val index4 = key.lastIndexOf(" ")
+        key = key.substring(index3 + 1, index4)
+        key = key.substring(key.lastIndexOf("/") + 1)
+        // 每个key计数为1
+        (key, 1)
+      }
+    ).reduceByKey( // 按照key进行聚合操作
+      _+_
+    )
+
+    // 针对分区进行操作，否则会报数据库连接非序列化错误
+    result.foreachPartition(saveToOracle)
+
+    sc.stop()
+  }
+
+  def saveToOracle(f:Iterator[(String, Int)]): Unit = {
+    // 基于jdbc，将数据导入关系型数据库
+    // 定义数据库连接
+    var conn: Connection = null
+    var pst:PreparedStatement = null
+    try {
+      conn = DriverManager.getConnection("jdbc:oracle:thin:@localhost:1521/orcl", "username", "password")
+      pst = conn.prepareStatement("insert into tbl_name values(?,?)")
+
+      // 导入数据
+      f.foreach(
+        data => {
+          pst.setString(1, data._1)
+          pst.setInt(2, data._2)
+
+          pst.executeUpdate()
+        }
+      )
+
+    } catch {
+      case e1:Exception => e1.printStackTrace()
+    } finally {
+      if (pst != null)
+        pst.close()
+      if (conn != null)
+        conn.close()
+    }
+  }
+
+}
+```
