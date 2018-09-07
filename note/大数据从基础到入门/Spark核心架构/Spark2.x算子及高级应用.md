@@ -64,7 +64,7 @@ RDD算子
     - count：求数量，类似select count(*) from ...
     - first：取第一个元素
     - take(n)：取RDD中的前n个元素
-    - saveAsTextFile：保存数据导文件上，也会触发计算
+    - saveAsTextFile：保存数据到文件上，也会触发计算
     - foreach(func)：对每个元素进行func操作
         - 与map区别：没有返回的值
 
