@@ -97,6 +97,20 @@
 1. 掌握最基本的自定义函数
 2. 了解用户自定义聚合函数
 
+#### 流计算引擎：Spark Streaming 2.X + Storm 1.0 + Kafka
+1. 掌握Spark Streaming核心原理
+2. 掌握Spark Streaming基本操作
+3. 掌握与Spark SQL的协同开发
+4. 掌握Spark Streaming数据存储于调优
+- [Spark Streaming 实时计算](./大数据从基础到入门/SparkStreaming2.X+Storm1.0+Kafka/SparkStreaming实时计算.md)
+1. 理解Spark Streaming工作原理
+2. 掌握DStream工作原理
+3. 掌握StreamingContext
+4. 掌握输入DStream和Receiver
+5. 掌握DStream的transformation操作
+6. 掌握DStream的output操作
+7. 掌握Spark Streaming与Spark SQL协同工作
+- [Spark Streaming 数据存储与调优](./大数据从基础到入门/SparkStreaming2.X+Storm1.0+Kafka/SparkStreaming数据存储与调优.md)
 ----------
 
 # 机器学习
