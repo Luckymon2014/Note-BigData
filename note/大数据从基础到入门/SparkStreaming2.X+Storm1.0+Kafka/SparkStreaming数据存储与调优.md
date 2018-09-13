@@ -136,7 +136,7 @@ ssc.checkpoint("fs_dir")
 3. Receiver将数据保存到BlockManager
 4. Receiver发送一份数据到StreamingContext的ReceiverTracker中
 5. JobGenerator每隔一个batch间隔去ReceiverTracker中获取一次时间间隔内的数据信息，然后将数据创建为一个RDD（每个batch对应一个RDD，也就是DStream中的一个时间段对应一个RDD），然后根据DStreamGraph定义的算子和各个DStream之间的依赖关系生成Job，通过JobScheduler提交Job
-6. 每个Spark Streaming底层的小Job的执行流程，与Spark内核架构师一样的
+6. 每个Spark Streaming底层的小Job的执行流程，与Spark内核架构是一样的
 
 ***
 

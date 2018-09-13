@@ -111,6 +111,20 @@
 6. 掌握DStream的output操作
 7. 掌握Spark Streaming与Spark SQL协同工作
 - [Spark Streaming 数据存储与调优](./大数据从基础到入门/SparkStreaming2.X+Storm1.0+Kafka/SparkStreaming数据存储与调优.md)
+- [Kafka核心技术](./大数据从基础到入门/SparkStreaming2.X+Storm1.0+Kafka/Kafka核心技术.md)
+1. 了解Kafka企业级平台发展简史
+2. 掌握Kafka安装及配置
+3. 掌握Kafka基本使用方法
+4. 了解Kafka在生产环境中使用
+5. 能够解决Kafka开发中常见的问题
+- [Kafka编程实战技术](./大数据从基础到入门/SparkStreaming2.X+Storm1.0+Kafka/Kafka编程实战技术.md)
+1. 了解Kafka开发基本方法
+2. 掌握Kafka开发环境配置
+3. 掌握KafkaAPi使用犯法
+4. 了解KafkaHA等高级特性
+5. 掌握Kafka与SparkStreaming进行整合开发
+6. 能够解决Kafka开发中常见的问题
+
 ----------
 
 # 机器学习
