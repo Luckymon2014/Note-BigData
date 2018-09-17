@@ -157,10 +157,137 @@ Partition
 
 <h4 id='4'>第四节 Kafka的分布式环境搭建</h4>
 
+- Kafka安装依赖于Java、Scala、Zookeeper
+- 配置环境变量
+- 配置server.properties
+    - broker.id：配置多行对应多个broker以及它们的id
+    - num.network/io.threads：根据集群数量确定
+    - log.dirs：logsegment（index、log）本地存储路径
+    - num.partitions：默认分区数
+    - zookeeper配置：存储consumer状态（上次读到哪里、topic元信息等）
+    - 单机配置
+        ```
+        broker.id = 0
+        port = 9092
+        host.name = hadoop001
+        log.dirs = /tmp/kafka-logs
+        zookeeper.connect=hadoop001:2181
+        num.partitions = 1
+        log.retention.hours = 168 # 日志保留时间
+        ```
+    - 单机启动
+        ```
+        1. 先启动Zookeeper
+        zkServer.sh start
+        2. 再启动Kafka Broker
+        $KAFKA_HOME/bin/kafka-server-start.sh $KAFKA_HOME/config/server.properties &
+        3. 确认启动成功
+        $KAFKA_HOME/bin/kafka-topics.sh --create --zookeeper hadoop001:2181 --replication-factor 1 --partitions 1 --topic singleServer
+        $KAFKA_HOME/bin/kafka-topics.sh --list --zookeeper hadoop001:2181
+        // topic = n partition = n * m replication-factor（副本个数，一个Broker对应一个）
+        ```
+    - 集群配置
+        - 配置多个server.properties
+            - 修改broker.id、port、log.dirs等参数
+    - 集群启动
+        ```
+        1. 删除历史数据
+        rm -rf /tmp/kafka-logs
+        2. 启动集群中多个节点
+        $KAFKA_HOME/bin/kafka-server-start.sh $KAFKA_HOME/config/server.properties &
+        $KAFKA_HOME/bin/kafka-server-start.sh $KAFKA_HOME/config/server1.properties &
+        $KAFKA_HOME/bin/kafka-server-start.sh $KAFKA_HOME/config/server2.properties &
+        ```
+
 ***
 
 <h4 id='5'>第五节 消息生产者、消费者以及消息发布的不同模型</h4>
 
+1. 理解Kafka消息消费者、生产者模型
+2. 理解Kafka消息消费发布流程
+
+---
+
+Kafka Producer
+- Producer产生数据发送给Kafka Server，具体的分发逻辑及负载均衡逻辑，全部由Producer维护
+- Producer不用连接Zookeeper
+- 指定broker和主题生产消息
+    ```
+    kafka-console-producer.sh --broker-list hadoop001:9092 --topic singleServer
+    ```
+- 从指定broker和主题消费消息
+    ```
+    kafka-console-consumer.sh --bootstrap-server hadoop001:9092 --from-beginning --topic singleServer
+    ```
+
+Kafka Consumer
+- Consumer以订阅形式获取Kafka数据
+- 两种Consumer API
+    - High Level Consumer API
+        - 将底层具体获取数据、更新offset、设置偏移量等操作屏蔽
+        - 直接将操作数据流的处理工作提供给编写程序的人员
+        - 操作简单
+        - 可操作性差，无法按照自己的业务场景选择处理方式
+        - ConsumerConnector
+    - Lower Level Consumer API(Simple Consumer API)
+        - 通过直接操作底层API获取数据的方式获取Kafka中的数据
+        - 需要自行给定分区、偏移量等属性
+        - 可操作性强
+        - 代码比较复杂
+        - SimpleConsumer
+
+Kafka Consumer Group
+- 消息被消费后，并不会被删除，只是相应的offset加一对于
+- 每条消息，在同一个Consumer Group里只会被一个Consumer消费
+- 不同Consumer Group可消费同一条消息
+
+Kafka High Level Consumer Rebalance
+- Rebalance提供了Consumer的HA特性
+    - Rebalance触发条件（Consumer数量发生变化）
+        - 有新的Consumer加入
+        - 旧的Consumer挂了
+        - topic的partition增加
+        - coodinator（协调器）挂了
+- 启动流程
+    - High Level Consumer启动时将其ID注册到其Consumer Group下的Zookeeper上的路径为/consumers/[consumer group]/ids/[consumer id]
+    - 在/consumers/[consumer group]/ids上注册Watch
+    - 在/brokers/ids上注册Watch
+    - 如果Consumer通过Topic Filter创建消息流，则会同时在/brokers/topics上也创建Watch
+    - 强制自己在其Consumer Group内启动Rebalance流程
+- Consumer Rebalance算法
+    - 将目标Topic下的所有Partition排序，存于PT
+    - 将某Consumer Group下所有Consumer排序，存于CG，第i个Consumer记为Ci
+    - N=size(PT)/size(CG)，向上取整
+    - 解除Ci对原来分配的Partition的消费权(i从0开始)
+    - 将第i\*N到(i+1)\*N-1个Partition分配给Ci
+- Consumer Rebalance算法缺陷改进
+    - Herd Effect任何Broker或者Consumer的增减都会触发所有的Consumer的Rebalance
+    - Split Brain每个Consumer分别单独通过Zookeeper判断哪些Broker和Consumer宕机，同时Consumer在同一时刻从Zookeeper“看”到的View可能不完全一样，由Zookeeper的特性决定
+    - 调整结果不可控，所有Consumer分别进行Rebalance，彼此不知道对应的Rebalance是否成功
+
 ***
 
 <h4 id='6'>第六节 Kafka的命令行工具</h4>
+
+1. 掌握Kafka命令行工具使用
+2. 掌握Kafka基本操作方法
+
+---
+
+```
+# 列出所有topic
+kafka-topics.sh --list --zookeeper hadoop001:2181
+# __consumer_offsets
+
+# 查看topic
+kafka-topics.sh --describe --zookeeper hadoop001:2181 --topic __consumer_offsets
+# Leader ID与Group ID对应
+
+# 修改topic分区
+kafka-topics.sh --alter --zookeeper hadoop001:2181 --partitions 2 --topic singleServer
+
+# 删除topic
+kafka-topics.sh --delete --zookeeper hadoop001:2181 --topic singleServer
+# Topic singleServer is marked for deletion.
+# 真删除：server.properties: delete.topic.enable=true
+```
