@@ -124,6 +124,13 @@
 4. 了解KafkaHA等高级特性
 5. 掌握Kafka与SparkStreaming进行整合开发
 6. 能够解决Kafka开发中常见的问题
+- [Storm深度解析](./大数据从基础到入门/SparkStreaming2.X+Storm1.0+Kafka/Storm深度解析.md)
+1. 了解Storm概述
+2. 掌握Storm核心原理
+3. 理解Storm Spout、Bolt等核心概念
+4. 掌握Storm高可用（HA）集群搭建
+5. 理解Storm优化
+6. 运用Kafka与Storm集成
 
 ----------
 
